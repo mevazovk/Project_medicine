@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic; 
+using System;
+using System.Collections.Generic;
 
 public class Medicine
 {
@@ -17,13 +17,96 @@ public class Medicine
     }
 }
 
+public class LinkedListNode<Item>
+{
+    public Item Value { get; set; }
+    public LinkedListNode<Item> Next { get; set; }
+
+    public LinkedListNode(Item value)
+    {
+        Value = value;
+        Next = null;
+    }
+}
+
+public class LinkedList<Item>
+{
+    public LinkedListNode<Item> Head { get; private set; }
+    public LinkedListNode<Item> Tail { get; private set; }
+
+    public void AddLast(Item value)
+    {
+        LinkedListNode<Item> newNode = new LinkedListNode<Item>(value);
+        if (Head == null)
+        {
+            Head = newNode;
+            Tail = newNode;
+        }
+        else
+        {
+            Tail.Next = newNode;
+            Tail = newNode;
+        }
+    }
+
+    public bool Remove(Item value)
+    {
+        if (Head == null) return false;
+
+        if (Head.Value.Equals(value))
+        {
+            Head = Head.Next;
+            if (Head == null)
+                Tail = null;
+            return true;
+        }
+
+        LinkedListNode<Item> current = Head;
+        while (current.Next != null && !current.Next.Value.Equals(value))
+        {
+            current = current.Next;
+        }
+
+        if (current.Next == null) return false;
+
+        current.Next = current.Next.Next;
+        if (current.Next == null)
+            Tail = current;
+        return true;
+    }
+
+    public LinkedListNode<Item> Find(Item value)
+    {
+        LinkedListNode<Item> current = Head;
+        while (current != null)
+        {
+            if (current.Value.Equals(value))
+                return current;
+            current = current.Next;
+        }
+        return null;
+    }
+
+    public void ForEach(Action<Item> action)
+    {
+        LinkedListNode<Item> current = Head;
+        while (current != null)
+        {
+            action(current.Value);
+            current = current.Next;
+        }
+    }
+}
+
 public class MedicineInventory
 {
     private Dictionary<string, LinkedListNode<Medicine>> inventory;
+    private LinkedList<Medicine> medicineList;
 
     public MedicineInventory()
     {
         inventory = new Dictionary<string, LinkedListNode<Medicine>>();
+        medicineList = new LinkedList<Medicine>();
     }
 
     public void AddMedicine(string name, int quantity, decimal pricePerUnit, DateTime expiryDate)
@@ -38,44 +121,46 @@ public class MedicineInventory
             Medicine newMedicine = new Medicine(name, quantity, pricePerUnit, expiryDate);
             LinkedListNode<Medicine> newNode = new LinkedListNode<Medicine>(newMedicine);
             inventory.Add(name, newNode);
+            medicineList.AddLast(newMedicine);
         }
-        Console.WriteLine("Medicine added!");
+        Console.WriteLine("Медикамент добавлен!");
     }
 
     public void RemoveMedicine(string name)
     {
         if (inventory.ContainsKey(name))
         {
+            LinkedListNode<Medicine> node = inventory[name];
             inventory.Remove(name);
-            Console.WriteLine("Medicine removed!");
+            medicineList.Remove(node.Value);
+            Console.WriteLine("Медикамент удален!");
         }
         else
         {
-            Console.WriteLine("Medicine not found!");
+            Console.WriteLine("Медикамент не найден!");
         }
     }
 
     public void PrintAllMedicines()
     {
-        Console.WriteLine("Medicine inventory:");
-        foreach (var kvp in inventory)
+        Console.WriteLine("Хранилище медикаментов:");
+        medicineList.ForEach(medicine =>
         {
-            Medicine medicine = kvp.Value.Value;
-            Console.WriteLine($"Name: {medicine.Name}, Quantity: {medicine.Quantity}, Price per unit: ${medicine.PricePerUnit}, Expiry Date: {medicine.ExpiryDate.ToShortDateString()}");
-        }
+            Console.WriteLine($"Название: {medicine.Name}, Количество: {medicine.Quantity}, Стоимость за штуку: ${medicine.PricePerUnit}, Дата порчи: {medicine.ExpiryDate.ToShortDateString()}");
+        });
     }
 
     public void FindMedicineByName(string name)
     {
-        Console.WriteLine($"Searching for medicine by name: {name}");
+        Console.WriteLine($"Поиск медикамента по имени: {name}");
         if (inventory.ContainsKey(name))
         {
             Medicine medicine = inventory[name].Value;
-            Console.WriteLine($"Name: {medicine.Name}, Quantity: {medicine.Quantity}, Price per unit: ${medicine.PricePerUnit}, Expiry Date: {medicine.ExpiryDate.ToShortDateString()}");
+            Console.WriteLine($"Название: {medicine.Name}, Количество: {medicine.Quantity}, Стоимость за штуку: ${medicine.PricePerUnit}, Дата порчи: {medicine.ExpiryDate.ToShortDateString()}");
         }
         else
         {
-            Console.WriteLine("Medicine not found!");
+            Console.WriteLine("Медикамент не найден!");
         }
     }
 
@@ -84,36 +169,34 @@ public class MedicineInventory
         if (inventory.ContainsKey(name))
         {
             inventory[name].Value.Quantity = newQuantity;
-            Console.WriteLine("Medicine quantity updated!");
+            Console.WriteLine("Количество медикаментов обновлено!");
         }
         else
         {
-            Console.WriteLine("Medicine not found!");
+            Console.WriteLine("Медикамент не найден!");
         }
     }
 
     public void ViewExpiringMedicines(DateTime expiryThreshold)
     {
-        Console.WriteLine($"Medicines expiring before {expiryThreshold.ToShortDateString()}:");
-        foreach (var kvp in inventory)
+        Console.WriteLine($"Медикаменты испортившиеся до {expiryThreshold.ToShortDateString()}:");
+        medicineList.ForEach(medicine =>
         {
-            Medicine medicine = kvp.Value.Value;
             if (medicine.ExpiryDate < expiryThreshold)
             {
-                Console.WriteLine($"Name: {medicine.Name}, Expiry Date: {medicine.ExpiryDate.ToShortDateString()}");
+                Console.WriteLine($"Название: {medicine.Name}, Дата порчи: {medicine.ExpiryDate.ToShortDateString()}");
             }
-        }
+        });
     }
 
     public void CalculateTotalCost()
     {
         decimal totalCost = 0;
-        foreach (var kvp in inventory)
+        medicineList.ForEach(medicine =>
         {
-            Medicine medicine = kvp.Value.Value;
             totalCost += medicine.Quantity * medicine.PricePerUnit;
-        }
-        Console.WriteLine($"Total cost of all medicines: ${totalCost}");
+        });
+        Console.WriteLine($"Стоимость всех медикаментов: ${totalCost}");
     }
 }
 
@@ -122,38 +205,35 @@ class Program
     static void Main(string[] args)
     {
         MedicineInventory inventory = new MedicineInventory();
-
-        Console.WriteLine("Welcome to the medicine management application!");
-
+        Console.WriteLine("Добро пожаловать в приложение по управлению медикаментами!");
         while (true)
         {
-            Console.WriteLine("\n1. Add Medicine");
-            Console.WriteLine("2. Remove Medicine");
-            Console.WriteLine("3. Print All Medicines");
-            Console.WriteLine("4. Find Medicine by Name");
-            Console.WriteLine("5. Update Medicine Quantity");
-            Console.WriteLine("6. View Expiring Medicines by Date");
-            Console.WriteLine("7. Calculate Total Cost of Medicines");
-            Console.WriteLine("8. Exit");
-
-            Console.Write("\nSelect an option: ");
+            Console.WriteLine("\n1. Добавить медикамент");
+            Console.WriteLine("2. Убрать медикамент");
+            Console.WriteLine("3. Показать все медикаменты");
+            Console.WriteLine("4. Поиск медикамента по названию");
+            Console.WriteLine("5. Обновить количество медикамента");
+            Console.WriteLine("6. Посмотреть испорченные медикаменты по дате");
+            Console.WriteLine("7. Посчитать общую стоимость медикаментов");
+            Console.WriteLine("8. Выход");
+            Console.Write("\nВыберите опцию: ");
             int choice = int.Parse(Console.ReadLine());
 
             switch (choice)
             {
                 case 1:
-                    Console.Write("\nEnter medicine name: ");
+                    Console.Write("\nНазвание медикамента: ");
                     string name = Console.ReadLine();
-                    Console.Write("Quantity: ");
+                    Console.Write("Количество: ");
                     int quantity = int.Parse(Console.ReadLine());
-                    Console.Write("Price per unit: ");
+                    Console.Write("Стоимость за штуку: ");
                     decimal pricePerUnit = decimal.Parse(Console.ReadLine());
-                    Console.Write("Expiry Date (month/day/year): ");
+                    Console.Write("Дата порчи (месяц/день/год): ");
                     DateTime expiryDate = DateTime.Parse(Console.ReadLine());
                     inventory.AddMedicine(name, quantity, pricePerUnit, expiryDate);
                     break;
                 case 2:
-                    Console.Write("\nEnter the medicine to remove: ");
+                    Console.Write("\nМедикамент, который вы хотите удалить: ");
                     string nameToRemove = Console.ReadLine();
                     inventory.RemoveMedicine(nameToRemove);
                     break;
@@ -161,19 +241,19 @@ class Program
                     inventory.PrintAllMedicines();
                     break;
                 case 4:
-                    Console.Write("\nEnter medicine name to find: ");
+                    Console.Write("\nПоиск медикамента по названию: ");
                     string nameToFind = Console.ReadLine();
                     inventory.FindMedicineByName(nameToFind);
                     break;
                 case 5:
-                    Console.Write("\nEnter medicine name to update quantity: ");
+                    Console.Write("\nНазвание медикамента для изменения количества: ");
                     string nameToUpdate = Console.ReadLine();
-                    Console.Write("Enter new quantity: ");
+                    Console.Write("Введите новое количество: ");
                     int newQuantity = int.Parse(Console.ReadLine());
                     inventory.UpdateMedicineQuantity(nameToUpdate, newQuantity);
                     break;
                 case 6:
-                    Console.Write("\nEnter expiry date threshold (month/day/year): ");
+                    Console.Write("\nВведите дату истечения (месяц/день/год): ");
                     DateTime expiryThreshold = DateTime.Parse(Console.ReadLine());
                     inventory.ViewExpiringMedicines(expiryThreshold);
                     break;
@@ -181,11 +261,11 @@ class Program
                     inventory.CalculateTotalCost();
                     break;
                 case 8:
-                    Console.WriteLine("\nThank you for using the application!");
+                    Console.WriteLine("\nСпасибо за использование приложения!");
                     Environment.Exit(0);
                     break;
                 default:
-                    Console.WriteLine("\nInvalid option! Please select another one!");
+                    Console.WriteLine("\nНеправильная опция! Выберите другую!");
                     break;
             }
         }
